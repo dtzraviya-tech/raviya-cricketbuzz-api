@@ -1,21 +1,12 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const fs = require('fs'); 
 
 function dxzExtractThumbnail($, element) {
     const context = $(element).closest('li, div, article, .cb-lst-itm, .cb-nws-itm, .cb-nws-lst-itm, section');
-   
     const dxzCricbuzzSelectors = [
-        '.cb-nws-thumb img',
-        '.cb-lst-itm-thumb img',
-        '.cb-nws-itm-thumb img',
-        '.cb-thumb img',
-        '[class*="thumb"] img',
-        '[class*="image"] img',
-        '.large-preview img',
-        '.preview-image img',
-        '.cb-nws-intr img',
-        '.cb-nws-feat img'
+        '.cb-nws-thumb img', '.cb-lst-itm-thumb img', '.cb-nws-itm-thumb img',
+        '.cb-thumb img', '[class*="thumb"] img', '[class*="image"] img',
+        '.large-preview img', '.preview-image img', '.cb-nws-intr img', '.cb-nws-feat img'
     ];
 
     for (const selector of dxzCricbuzzSelectors) {
@@ -24,9 +15,7 @@ function dxzExtractThumbnail($, element) {
             let src = imgEl.attr('src') || imgEl.attr('data-src') || imgEl.attr('data-original');
             if (src) {
                 src = src.includes('http') ? src : `https:${src}`;
-                if (src.includes('cricbuzz') || src.includes('static.cricbuzz') || src.match(/\.(jpg|jpeg|png|webp)$/i)) {
-                    return src;
-                }
+                if (src.includes('cricbuzz') || src.includes('static.cricbuzz') || src.match(/\.(jpg|jpeg|png|webp)$/i)) return src;
             }
         }
     }
@@ -38,24 +27,16 @@ function dxzExtractThumbnail($, element) {
         if (bgMatch) {
             let src = bgMatch[1];
             src = src.includes('http') ? src : `https:${src}`;
-            if (src.includes('cricbuzz') || src.match(/\.(jpg|jpeg|png|webp)$/i)) {
-                return src;
-            }
+            if (src.includes('cricbuzz') || src.match(/\.(jpg|jpeg|png|webp)$/i)) return src;
         }
     }
    
     const allImgs = context.find('img').addBack('img');
     for (let i = 0; i < Math.min(5, allImgs.length); i++) {
-        let src = allImgs.eq(i).attr('src') ||
-                  allImgs.eq(i).attr('data-src') ||
-                  allImgs.eq(i).attr('data-original') ||
-                  allImgs.eq(i).attr('data-lazy-src');
-       
+        let src = allImgs.eq(i).attr('src') || allImgs.eq(i).attr('data-src') || allImgs.eq(i).attr('data-original') || allImgs.eq(i).attr('data-lazy-src');
         if (src && src !== '/images/no_image.png') {
             src = src.includes('http') ? src : `https:${src}`;
-            if (src.includes('cricbuzz') || src.includes('static.cricbuzz') || src.match(/\.(jpg|jpeg|png|webp|gif)$/i)) {
-                return src;
-            }
+            if (src.includes('cricbuzz') || src.includes('static.cricbuzz') || src.match(/\.(jpg|jpeg|png|webp|gif)$/i)) return src;
         }
     }
     
@@ -64,10 +45,7 @@ function dxzExtractThumbnail($, element) {
         const parentImgs = parentContainer.find('img').not(context.find('img'));
         for (let i = 0; i < Math.min(3, parentImgs.length); i++) {
             let src = parentImgs.eq(i).attr('src') || parentImgs.eq(i).attr('data-src');
-            if (src && src.includes('cricbuzz')) {
-                src = src.includes('http') ? src : `https:${src}`;
-                return src;
-            }
+            if (src && src.includes('cricbuzz')) return src.includes('http') ? src : `https:${src}`;
         }
     }
     return '';
@@ -95,15 +73,10 @@ function dxzExtractTime($, element) {
             const text = timeEl.text().trim();
             const attrTime = timeEl.attr('datetime') || timeEl.attr('title');
             if (attrTime && attrTime !== text) return attrTime.trim();
-            for (const pattern of timePatterns) {
-                if (pattern.test(text)) return text;
-            }
+            for (const pattern of timePatterns) if (pattern.test(text)) return text;
         }
     }
-    const broaderContext = context.closest('.cb-nws-lst, .cb-lst, section, main').length
-        ? context.closest('.cb-nws-lst, .cb-lst, section, main')
-        : context;
-   
+    const broaderContext = context.closest('.cb-nws-lst, .cb-lst, section, main').length ? context.closest('.cb-nws-lst, .cb-lst, section, main') : context;
     const allText = broaderContext.text();
     for (const pattern of timePatterns) {
         const match = allText.match(pattern);
@@ -128,89 +101,49 @@ function dxzExtractTournament(title, link, contextText) {
         if (match) return match[0];
     }
     const contextLower = contextText.toLowerCase();
-    if (contextLower.includes('ipl') || contextLower.includes('world cup') ||
-        contextLower.includes('t20') || contextLower.includes('champions trophy')) {
-        return 'Major Tournament';
-    }
+    if (contextLower.includes('ipl') || contextLower.includes('world cup') || contextLower.includes('t20') || contextLower.includes('champions trophy')) return 'Major Tournament';
     return '';
 }
 
 function dxzExtractCategory(context) {
     const allText = context.text().toLowerCase();
-   
     const directCategories = {
-        'match report': 'Match Report',
-        'match reports': 'Match Report',
-        'report': 'Match Report',
-        'match preview': 'Preview',
-        'preview': 'Preview',
-        'match analysis': 'Analysis',
-        'analysis': 'Analysis',
-        'feature': 'Feature',
-        'features': 'Feature',
-        'interview': 'Interview',
-        'live blog': 'Live Blog',
-        'live updates': 'Live Blog'
+        'match report': 'Match Report', 'match reports': 'Match Report', 'report': 'Match Report',
+        'match preview': 'Preview', 'preview': 'Preview', 'match analysis': 'Analysis',
+        'analysis': 'Analysis', 'feature': 'Feature', 'features': 'Feature',
+        'interview': 'Interview', 'live blog': 'Live Blog', 'live updates': 'Live Blog'
     };
-    for (const [key, value] of Object.entries(directCategories)) {
-        if (allText.includes(key)) return value;
-    }
-    if (allText.includes('live') || allText.includes('ongoing') || allText.includes('today')) {
-        return 'Live Updates';
-    }
-    if (allText.includes('preview') || allText.includes('build-up')) {
-        return 'Preview';
-    }
-    if (allText.includes('report') || allText.includes('result')) {
-        return 'Match Report';
-    }
-    if (allText.includes('analysis') || allText.includes('review')) {
-        return 'Analysis';
-    }
-    if (allText.includes('interview') || allText.includes('exclusive')) {
-        return 'Interview';
-    }
+    for (const [key, value] of Object.entries(directCategories)) if (allText.includes(key)) return value;
+    if (allText.includes('live') || allText.includes('ongoing') || allText.includes('today')) return 'Live Updates';
+    if (allText.includes('preview') || allText.includes('build-up')) return 'Preview';
+    if (allText.includes('report') || allText.includes('result')) return 'Match Report';
+    if (allText.includes('analysis') || allText.includes('review')) return 'Analysis';
+    if (allText.includes('interview') || allText.includes('exclusive')) return 'Interview';
     return 'News';
 }
 
 function dxzExtractStructuredNews($, element) {
-    const dxzNewsItem = {
-        category: '',
-        tournament: '',
-        title: '',
-        subtitle: '',
-        time: '',
-        thumbnail: '',
-        link: ''
-    };
+    const dxzNewsItem = { category: '', tournament: '', title: '', subtitle: '', time: '', thumbnail: '', link: '' };
     let linkEl = $(element).find('a[href*="/cricket-news"], a[href*="/news/"], a[href*="/story/"]').first();
-    if (!linkEl.length) {
-        linkEl = $(element).find('a[href*="/cricket/"][href*="/news"]').first();
-    }
-    if (!linkEl.length) {
-        linkEl = $(element).find('a').first();
-    }
-    if (!linkEl.length) {
-        linkEl = $(element).filter('a');
-    }
+    if (!linkEl.length) linkEl = $(element).find('a[href*="/cricket/"][href*="/news"]').first();
+    if (!linkEl.length) linkEl = $(element).find('a').first();
+    if (!linkEl.length) linkEl = $(element).filter('a');
+    
     dxzNewsItem.link = linkEl.attr('href') || '';
     dxzNewsItem.title = (linkEl.text() || $(element).text()).replace(/\s+/g, ' ').trim();
     if (!dxzNewsItem.title || dxzNewsItem.title.length < 10) return dxzNewsItem;
+    
     const context = $(element).closest('li, div, article, .cb-lst-itm, .cb-nws-itm, .cb-nws-lst-itm');
     const allContextText = context.text().toLowerCase();
+    
     dxzNewsItem.tournament = dxzExtractTournament(dxzNewsItem.title, dxzNewsItem.link, allContextText);
     dxzNewsItem.category = dxzExtractCategory(context.length ? context : $(element));
     dxzNewsItem.thumbnail = dxzExtractThumbnail($, element);
     
     context.find('p, .description, .summary, span, small, div:not([class*="time"])').each((i, el) => {
         if (dxzNewsItem.subtitle) return false;
-        let text = $(el).text().trim();
-        text = text.replace(/\s+/g, ' ').trim();
-       
-        if (text && text !== dxzNewsItem.title &&
-            text.length > 20 && text.length < 300 &&
-            !text.match(/\d+m ago|\d+h ago|\d+d ago/i) &&
-            !text.match(/ago|just now/i)) {
+        let text = $(el).text().trim().replace(/\s+/g, ' ').trim();
+        if (text && text !== dxzNewsItem.title && text.length > 20 && text.length < 300 && !text.match(/\d+m ago|\d+h ago|\d+d ago/i) && !text.match(/ago|just now/i)) {
             dxzNewsItem.subtitle = text;
         }
     });
@@ -218,80 +151,46 @@ function dxzExtractStructuredNews($, element) {
     return dxzNewsItem;
 }
 
-async function dxzScrapeCricbuzzNewsEnhanced() {
+async function scrapeCricbuzz() {
     try {
-        console.log('🌐 Fetching Cricbuzz main page with FIXED thumbnails...');
         const response = await axios.get('https://www.cricbuzz.com/', {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Connection': 'keep-alive',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                'Sec-Ch-Ua-Mobile': '?0',
-                'Sec-Ch-Ua-Platform': '"Windows"'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             },
             timeout: 20000
         });
         const $ = cheerio.load(response.data);
         const dxzNews = [];
-        let processed = 0;
-        let thumbnailsFound = 0;
 
         const selectors = [
-            '.cb-nws-lst li',
-            '.cb-lst-itm',
-            '.cb-nws-itm',
-            'a[href*="/cricket-news/"]',
-            'a[href*="/news/"]',
-            'a[href*="/story/"]',
-            '[class*="nws"] li, [class*="nws"] div',
-            '[class*="news"] li, [class*="news"] div',
-            '.cb-feat-rgt-itms li',
-            '.cb-nws-feat li',
-            '.cb-nws-lst-itm'
+            '.cb-nws-lst li', '.cb-lst-itm', '.cb-nws-itm', 'a[href*="/cricket-news/"]',
+            'a[href*="/news/"]', 'a[href*="/story/"]', '[class*="nws"] li, [class*="nws"] div',
+            '[class*="news"] li, [class*="news"] div', '.cb-feat-rgt-itms li', '.cb-nws-feat li', '.cb-nws-lst-itm'
         ];
-        selectors.forEach((selector, selectorIndex) => {
-            const elements = $(selector);
-            console.log(`📋 Selector ${selectorIndex + 1}: ${selector} -> ${elements.length} elements`);
-           
-            elements.each((index, element) => {
-                processed++;
+        
+        selectors.forEach(selector => {
+            $(selector).each((index, element) => {
                 const newsItem = dxzExtractStructuredNews($, $(element));
-               
-                if (newsItem.title && newsItem.title.length > 15 &&
-                    newsItem.link && newsItem.link.includes('/') &&
-                    !dxzNews.some(n => n.title === newsItem.title && n.link === newsItem.link)) {
-                   
+                if (newsItem.title && newsItem.title.length > 15 && newsItem.link && newsItem.link.includes('/') && !dxzNews.some(n => n.title === newsItem.title && n.link === newsItem.link)) {
                     const fullLink = newsItem.link.startsWith('http') ? newsItem.link : `https://www.cricbuzz.com${newsItem.link}`;
-                    const item = {
-                        ...newsItem,
-                        link: fullLink,
-                        source: 'main-page'
-                    };
-                   
-                    if (newsItem.thumbnail) thumbnailsFound++;
-                    dxzNews.push(item);
+                    dxzNews.push({ ...newsItem, link: fullLink, source: 'main-page' });
                 }
             });
         });
-        console.log(`✅ Processed ${processed} elements, found ${dxzNews.length} valid news items`);
-        console.log(`🖼️ Thumbnails found: ${thumbnailsFound}/${dxzNews.length} (${Math.round(thumbnailsFound/dxzNews.length*100)}%)`);
-        return dxzNews.slice(0, 25);
+
+        return {
+            status: true,
+            creator: "@Raviya",
+            total_news: dxzNews.length > 25 ? 25 : dxzNews.length,
+            data: dxzNews.slice(0, 25)
+        };
     } catch (error) {
-        console.error('❌ Enhanced scraper error:', error.message);
-        if (error.response) {
-            console.error('Status:', error.response.status);
-        }
-        return [];
+        return {
+            status: false,
+            creator: "@Raviya",
+            message: error.message || "Failed to scrape Cricbuzz"
+        };
     }
 }
 
-// Export the scraping function for use in server.js
-module.exports = {
-    getCricketNews: dxzScrapeCricbuzzNewsEnhanced
-};
+module.exports = { scrapeCricbuzz };
