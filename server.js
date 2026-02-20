@@ -1,40 +1,34 @@
 const express = require('express');
-const { getCricketNews } = require('./scraper');
+const { scrapeCricbuzz } = require('./scraper');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// API Endpoint to get the scraped news
-app.get('/api/news', async (req, res) => {
-    try {
-        console.log('Incoming request to /api/news');
-        // Call your original scraping function
-        const newsData = await getCricketNews();
-        
-        if (!newsData || newsData.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No news found at this time."
-            });
+// Middleware
+app.use(express.json());
+
+// Root endpoint for API info
+app.get('/', (req, res) => {
+    res.json({
+        message: "Welcome to the Cricbuzz News API",
+        creator: "@Raviya",
+        endpoints: {
+            news: "/api/news"
         }
-
-        // Return the data as a JSON response
-        res.json({
-            success: true,
-            count: newsData.length,
-            data: newsData
-        });
-
-    } catch (error) {
-        console.error('Server Error:', error);
-        res.status(500).json({
-            success: false,
-            message: "An error occurred while fetching the news."
-        });
-    }
+    });
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 API Server is running on http://localhost:${PORT}`);
-    console.log(`👉 Access the news at: http://localhost:${PORT}/api/news`);
+// Cricbuzz News API
+app.get('/api/news', async (req, res) => {
+    const result = await scrapeCricbuzz();
+    res.json(result);
 });
+
+// Local testing (Vercel එක මේක ගණන් ගන්නේ නෑ)
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(3000, () => {
+        console.log(`✅ Server is running on http://localhost:3000`);
+    });
+}
+
+// Vercel එකට අනිවාර්යයි
+module.exports = app;
